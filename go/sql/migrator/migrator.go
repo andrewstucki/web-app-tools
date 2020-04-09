@@ -1,4 +1,4 @@
-package rice_migrator
+package migrator
 
 import (
 	rice "github.com/GeertJohan/go.rice"
