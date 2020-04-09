@@ -197,13 +197,13 @@ func (h *Handler) handleEnd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawToken, err := h.getClaimsAndCacheToken(r.Context(), token)
+	claims, rawToken, err := h.getClaimsAndCacheToken(r.Context(), token)
 	if err != nil {
 		h.callbacks.OnInvalidToken(w, err)
 		return
 	}
 
-	h.callbacks.OnSuccess(w, location, rawToken)
+	h.callbacks.OnSuccess(w, location, rawToken, claims)
 }
 
 // AuthenticationMiddleware provides a mechanism for validating tokens passed
@@ -218,7 +218,6 @@ func (h *Handler) AuthenticationMiddleware(unauthorizedHandler func(w http.Respo
 				return
 			}
 
-			var rawToken string
 			tokenClaims := &verifier.StandardClaims{}
 			// bad claims == bad token
 			if err := h.verifier.VerifyIDToken(auth[1], tokenClaims); err != nil {
@@ -254,15 +253,17 @@ func (h *Handler) AuthenticationMiddleware(unauthorizedHandler func(w http.Respo
 					goto SET_CONTEXT
 				}
 
-				rawToken, err = h.getClaimsAndCacheToken(r.Context(), refreshed)
+				newTokenClaims, rawToken, err := h.getClaimsAndCacheToken(r.Context(), refreshed)
 				if err != nil {
 					goto SET_CONTEXT
 				}
 
-				if err := h.callbacks.OnRefresh(w, rawToken); err != nil {
+				err = h.callbacks.OnRefresh(w, rawToken)
+				if err != nil {
 					h.logger.Warn().Err(err).Msg("refresh handler failed")
+				} else {
+					tokenClaims = newTokenClaims
 				}
-
 			}
 
 		SET_CONTEXT:
@@ -291,40 +292,40 @@ func (h *Handler) MustClaims(ctx context.Context) *verifier.StandardClaims {
 }
 
 // any errors here are going to result in an ErrInvalidToken above
-func (h *Handler) getClaimsAndCacheToken(ctx context.Context, token *oauth2.Token) (string, error) {
+func (h *Handler) getClaimsAndCacheToken(ctx context.Context, token *oauth2.Token) (*verifier.StandardClaims, string, error) {
 	if !token.Valid() {
 		h.logger.Warn().Err(ErrInvalidToken).Msg("token failed validation")
-		return "", ErrInvalidToken
+		return nil, "", ErrInvalidToken
 	}
 
 	// convert the id_token parameter
 	extraToken := token.Extra("id_token")
 	if extraToken == nil {
 		h.logger.Warn().Err(ErrInvalidToken).Msg("no id_token value found")
-		return "", ErrInvalidToken
+		return nil, "", ErrInvalidToken
 	}
 	idToken, ok := extraToken.(string)
 	if !ok {
 		h.logger.Warn().Err(ErrInvalidToken).Msg("id_token of the wrong type")
-		return "", ErrInvalidToken
+		return nil, "", ErrInvalidToken
 	}
 	tokenClaims := &verifier.StandardClaims{}
 	if err := h.verifier.VerifyIDToken(idToken, tokenClaims); err != nil {
 		h.logger.Warn().Err(err).Msg("token verification failed")
-		return "", err
+		return nil, "", err
 	}
 
 	// use the token manager to store the token serialized as JSON
 	serialized, err := json.Marshal(token)
 	if err != nil {
 		h.logger.Warn().Err(err).Msg("json marshaling failed")
-		return "", err
+		return nil, "", err
 	}
 	if err := h.tokenManager.Set(ctx, tokenClaims.Subject, string(serialized)); err != nil {
 		h.logger.Warn().Err(err).Msg("failed to write token to manager")
-		return "", err
+		return nil, "", err
 	}
-	return idToken, nil
+	return tokenClaims, idToken, nil
 }
 
 type stateClaims struct {

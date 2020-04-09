@@ -19,7 +19,7 @@ type Callbacks interface {
 	OnError(w http.ResponseWriter, err error)
 	// OnSuccess is invoked when an id token is retrieved for the first
 	// time at the end of an OAuth flow
-	OnSuccess(w http.ResponseWriter, location, raw string)
+	OnSuccess(w http.ResponseWriter, location, raw string, claims *verifier.StandardClaims)
 	// OnInvalidToken is invoked when an id token is determined to be invalid
 	// based off of the verification configuration passed into the handler
 	OnInvalidToken(w http.ResponseWriter, err error)

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/andrewstucki/web-app-tools/go/common"
+	"github.com/andrewstucki/web-app-tools/go/oauth/verifier"
 )
 
 //CookieCallbacks set stuff in cookies
@@ -53,7 +54,7 @@ func (c *CookieCallbacks) OnError(w http.ResponseWriter, err error) {
 }
 
 // OnSuccess writes the new token to local storage and redirects to a given location
-func (c *CookieCallbacks) OnSuccess(w http.ResponseWriter, location, token string) {
+func (c *CookieCallbacks) OnSuccess(w http.ResponseWriter, location, token string, claims *verifier.StandardClaims) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.key,
 		Value:    token,

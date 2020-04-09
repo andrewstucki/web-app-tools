@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/andrewstucki/web-app-tools/go/common"
+	"github.com/andrewstucki/web-app-tools/go/oauth/verifier"
 )
 
 type successData struct {
@@ -73,7 +74,7 @@ func (c *LocalStorageCallbacks) OnError(w http.ResponseWriter, err error) {
 }
 
 // OnSuccess writes the new token to local storage and redirects to a given location
-func (c *LocalStorageCallbacks) OnSuccess(w http.ResponseWriter, location, token string) {
+func (c *LocalStorageCallbacks) OnSuccess(w http.ResponseWriter, location, token string, claims *verifier.StandardClaims) {
 	c.renderer().Render(w, http.StatusOK, successData{
 		Key:      c.key,
 		Token:    token,

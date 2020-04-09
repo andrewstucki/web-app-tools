@@ -1,0 +1,10 @@
+app_root: .
+build_delay: 200ns
+build_path: tmp
+binary_name: example-dev
+enable_colors: true
+ignored_folders:
+  - frontend
+  - tmp
+included_extensions:
+  - .go

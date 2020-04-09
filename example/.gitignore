@@ -1,0 +1,6 @@
+.env*
+tmp
+frontend/build
+.overmind.sock
+rice-box.go
+example
