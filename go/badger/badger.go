@@ -1,6 +1,8 @@
 package badger
 
 import (
+	"context"
+
 	badger "github.com/dgraph-io/badger/v2"
 )
 
@@ -24,14 +26,14 @@ func NewBadgerTokenManager(path string) (*BadgerTokenManager, error) {
 }
 
 // Set sets or updates the stored token
-func (m *BadgerTokenManager) Set(subject, value string) error {
+func (m *BadgerTokenManager) Set(ctx context.Context, subject, value string) error {
 	return m.db.Update(func(tx *badger.Txn) error {
 		return tx.Set([]byte(subject), []byte(value))
 	})
 }
 
 // Get returns the stored token
-func (m *BadgerTokenManager) Get(subject string) (string, error) {
+func (m *BadgerTokenManager) Get(ctx context.Context, subject string) (string, error) {
 	var value []byte
 	if err := m.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(subject))
