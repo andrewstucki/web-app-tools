@@ -4,6 +4,8 @@ import (
 	rice "github.com/GeertJohan/go.rice"
 	migrate "github.com/golang-migrate/migrate/v4"
 
+	// import postgres driver
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	// import pq
 	_ "github.com/lib/pq"
 )
