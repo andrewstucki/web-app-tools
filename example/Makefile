@@ -8,6 +8,7 @@ deps:
 	@go get github.com/volatiletech/sqlboiler
 	@go get github.com/volatiletech/sqlboiler/drivers/sqlboiler-psql
 	@go get github.com/andrewstucki/typescriptify-golang-structs/tscriptify
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.24.0
 	@yarn --cwd frontend
 
 .PHONY: dev

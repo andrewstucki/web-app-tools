@@ -12,10 +12,14 @@ const authenticatedUrl = "/oauth";
 export interface RootState {
   profile: ProfileState;
 }
+export const initialState: RootState = {
+  profile,
+}
+export const reducer = combineReducers<RootState>(initialState);
 
 export default (client: AxiosInstance) =>
   createStore(
-    combineReducers<RootState>({ profile }),
+    reducer,
     composeWithDevTools(
       applyMiddleware(
         authenticatedMiddleware(client, tokenKey, headerKey, authenticatedUrl)
