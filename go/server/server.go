@@ -242,7 +242,7 @@ func initializeOAuth(setup *SetupConfig, config Config) (*oauth.Handler, error) 
 		}
 	}
 	if len(domains) > 0 {
-		verifier = verifier.WithDomains(config.Domains...)
+		verifier = verifier.WithDomains(domains...)
 	}
 
 	clientID := config.ClientID

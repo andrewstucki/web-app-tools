@@ -46,7 +46,7 @@ export const getProfile = () => {
       }
       return profileError(error);
     },
-    convertData: (data: any) => createProfileResponseFrom(data),
+    convertData: createProfileResponseFrom,
     onResponse: (response: AxiosResponse<ProfileResponse>) => profileSuccess(response.data),
   });
 };
