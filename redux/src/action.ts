@@ -8,7 +8,7 @@ import {
   CancelToken,
   AxiosError,
   AxiosResponse,
-  ResponseType
+  ResponseType,
 } from "axios";
 
 export type AuthenticatedRequestConfig = {
@@ -52,6 +52,8 @@ export type AuthenticatedRequestPayload<T = any, U = any> = {
   // Called when Axios receives download progress updates
   onDownloadProgress?: (progressEvent: ProgressEvent) => Action | void;
   // Called on a response
+  convertData?: (data: any) => T;
+  // Called on a response
   onResponse: (response: AxiosResponse<T>) => Action | void;
   // Called on an error
   onError: (error: AxiosError<U>) => Action | void;
@@ -66,7 +68,7 @@ export type AuthenticatedLogOut = {
 
 // Action creator, Use it to create a new log out action
 export const authenticatedLogOut = (): AuthenticatedLogOut => ({
-  type: AUTHENTICATED_LOG_OUT
+  type: AUTHENTICATED_LOG_OUT,
 });
 
 // Basic type for a request action
@@ -81,7 +83,7 @@ export function authenticatedRequest<T, U>(
 ): AuthenticatedRequest<T, U> {
   return {
     type: AUTHENTICATED_REQUEST,
-    payload
+    payload,
   };
 }
 

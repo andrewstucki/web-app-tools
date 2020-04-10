@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
+	uuid "github.com/satori/go.uuid"
 	"github.com/volatiletech/sqlboiler/boil"
 	"github.com/volatiletech/sqlboiler/queries"
 	"github.com/volatiletech/sqlboiler/queries/qm"
@@ -23,11 +24,11 @@ import (
 
 // User is an object representing the database table.
 type User struct {
-	ID        string    `boil:"id" json:"id" toml:"id" yaml:"id"`
+	ID        uuid.UUID `boil:"id" json:"id" toml:"id" yaml:"id"`
 	Email     string    `boil:"email" json:"email" toml:"email" yaml:"email"`
-	GoogleID  string    `boil:"google_id" json:"google_id" toml:"google_id" yaml:"google_id"`
-	CreatedAt time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt time.Time `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	GoogleID  string    `boil:"google_id" json:"-" toml:"-" yaml:"-"`
+	CreatedAt time.Time `boil:"created_at" json:"createdAt" toml:"createdAt" yaml:"createdAt"`
+	UpdatedAt time.Time `boil:"updated_at" json:"updatedAt" toml:"updatedAt" yaml:"updatedAt"`
 
 	R *userR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L userL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -48,6 +49,22 @@ var UserColumns = struct {
 }
 
 // Generated where
+
+type whereHelperstring struct{ field string }
+
+func (w whereHelperstring) EQ(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperstring) NEQ(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperstring) LT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperstring) LTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperstring) GT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperstring) GTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperstring) IN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
 
 type whereHelpertime_Time struct{ field string }
 
@@ -71,13 +88,13 @@ func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
 }
 
 var UserWhere = struct {
-	ID        whereHelperstring
+	ID        whereHelperuuid_UUID
 	Email     whereHelperstring
 	GoogleID  whereHelperstring
 	CreatedAt whereHelpertime_Time
 	UpdatedAt whereHelpertime_Time
 }{
-	ID:        whereHelperstring{field: "\"users\".\"id\""},
+	ID:        whereHelperuuid_UUID{field: "\"users\".\"id\""},
 	Email:     whereHelperstring{field: "\"users\".\"email\""},
 	GoogleID:  whereHelperstring{field: "\"users\".\"google_id\""},
 	CreatedAt: whereHelpertime_Time{field: "\"users\".\"created_at\""},
@@ -249,7 +266,7 @@ func (userL) LoadUserTokens(ctx context.Context, e boil.ContextExecutor, singula
 			}
 
 			for _, a := range args {
-				if a == obj.ID {
+				if queries.Equal(a, obj.ID) {
 					continue Outer
 				}
 			}
@@ -297,7 +314,7 @@ func (userL) LoadUserTokens(ctx context.Context, e boil.ContextExecutor, singula
 
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
-			if local.ID == foreign.UserID {
+			if queries.Equal(local.ID, foreign.UserID) {
 				local.R.UserTokens = append(local.R.UserTokens, foreign)
 				if foreign.R == nil {
 					foreign.R = &userTokenR{}
@@ -319,7 +336,7 @@ func (o *User) AddUserTokens(ctx context.Context, exec boil.ContextExecutor, ins
 	var err error
 	for _, rel := range related {
 		if insert {
-			rel.UserID = o.ID
+			queries.Assign(&rel.UserID, o.ID)
 			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
 				return errors.Wrap(err, "failed to insert into foreign table")
 			}
@@ -340,7 +357,7 @@ func (o *User) AddUserTokens(ctx context.Context, exec boil.ContextExecutor, ins
 				return errors.Wrap(err, "failed to update foreign table")
 			}
 
-			rel.UserID = o.ID
+			queries.Assign(&rel.UserID, o.ID)
 		}
 	}
 
@@ -372,7 +389,7 @@ func Users(mods ...qm.QueryMod) userQuery {
 
 // FindUser retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindUser(ctx context.Context, exec boil.ContextExecutor, iD string, selectCols ...string) (*User, error) {
+func FindUser(ctx context.Context, exec boil.ContextExecutor, iD uuid.UUID, selectCols ...string) (*User, error) {
 	userObj := &User{}
 
 	sel := "*"
@@ -825,7 +842,7 @@ func (o *UserSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor) er
 }
 
 // UserExists checks if the User row exists.
-func UserExists(ctx context.Context, exec boil.ContextExecutor, iD string) (bool, error) {
+func UserExists(ctx context.Context, exec boil.ContextExecutor, iD uuid.UUID) (bool, error) {
 	var exists bool
 	sql := "select exists(select 1 from \"users\" where \"id\"=$1 limit 1)"
 

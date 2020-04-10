@@ -27,8 +27,8 @@ func (r Role) policiesFor(namespace uuid.UUID) []Policy {
 
 // Policy associates a resource with an action
 type Policy struct {
-	Resource
-	Action
+	Resource `json:"resource"`
+	Action   `json:"action"`
 }
 
 // String returns the representation of a policy as a string

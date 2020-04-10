@@ -24,6 +24,8 @@ func RequestLogger(logger zerolog.Logger) func(next http.Handler) http.Handler {
 					level = zerolog.WarnLevel
 				}
 
+				duration := time.Since(startTime)
+
 				fields := logger.
 					WithLevel(level).
 					Str("system", "http").
@@ -35,7 +37,8 @@ func RequestLogger(logger zerolog.Logger) func(next http.Handler) http.Handler {
 					Str("http.start_time", startTime.Format(time.RFC3339)).
 					Int("http.status", status).
 					Int("http.bytes_written", wrapped.BytesWritten()).
-					Dur("http.duration", time.Since(startTime))
+					Dur("http.duration", duration).
+					Str("http.duration.human", duration.String())
 				if d, ok := r.Context().Deadline(); ok {
 					fields = fields.Str("http.request.deadline", d.Format(time.RFC3339))
 				}

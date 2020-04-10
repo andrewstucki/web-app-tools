@@ -1,7 +1,7 @@
 import { applyMiddleware, combineReducers, createStore } from "redux";
 import { composeWithDevTools } from "redux-devtools-extension";
 import { AxiosInstance } from "axios";
-import { authenticatedMiddleware } from "@andrewstucki/google-oauth-tools-middleware";
+import { authenticatedMiddleware } from "@andrewstucki/web-app-tools-middleware";
 
 import profile, { ProfileState } from "./reducer";
 

@@ -5,13 +5,11 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog"
 
 	"github.com/andrewstucki/web-app-tools/go/common"
 	"github.com/andrewstucki/web-app-tools/go/oauth"
 	"github.com/andrewstucki/web-app-tools/go/oauth/verifier"
-	sqlContext "github.com/andrewstucki/web-app-tools/go/sql/context"
 )
 
 var (
@@ -39,13 +37,13 @@ type ClaimsOrToken struct {
 }
 
 // currentUser is a middleware that injects the current user into the context
-func currentUser(db *sqlx.DB, handler *oauth.Handler, renderer common.Renderer, logger zerolog.Logger, getter func(ctx context.Context, queryer sqlContext.QueryContext, claims *ClaimsOrToken) (interface{}, error)) func(next http.Handler) http.Handler {
+func currentUser(handler *oauth.Handler, renderer common.Renderer, logger zerolog.Logger, getter func(ctx context.Context, claims *ClaimsOrToken) (interface{}, error)) func(next http.Handler) http.Handler {
 	fn := func(ctx context.Context) (interface{}, error) {
 		if claims := handler.Claims(ctx); claims != nil {
-			return getter(ctx, sqlContext.GetQueryer(ctx, db), &ClaimsOrToken{Claims: claims})
+			return getter(ctx, &ClaimsOrToken{Claims: claims})
 		}
 		if token := getToken(ctx); token != "" {
-			return getter(ctx, sqlContext.GetQueryer(ctx, db), &ClaimsOrToken{Token: token})
+			return getter(ctx, &ClaimsOrToken{Token: token})
 		}
 		return nil, nil
 	}

@@ -1,19 +1,21 @@
 import {
   RootAction,
-  CURRENT_USER_INIT,
-  CURRENT_USER_SUCCESS,
-  CURRENT_USER_ERROR
+  PROFILE_INIT,
+  PROFILE_SUCCESS,
+  PROFILE_ERROR
 } from "./actions";
-import { User } from "./models";
+import { User, Policy } from "./models";
 
 export type ProfileState = {
   readonly user: User | null;
+  readonly policies: Policy[];
   readonly error: Error | null;
   readonly loading: boolean;
 };
 
 const initialState = {
   user: null,
+  policies: [],
   error: null,
   loading: false
 };
@@ -23,13 +25,13 @@ export default function(
   action: RootAction
 ): ProfileState {
   switch (action.type) {
-    case CURRENT_USER_INIT:
+    case PROFILE_INIT:
       return { ...initialState, loading: true };
 
-    case CURRENT_USER_SUCCESS:
-      return { ...state, loading: false, user: action.payload };
+    case PROFILE_SUCCESS:
+      return { ...state, loading: false, user: action.payload.user, policies: action.payload.policies };
 
-    case CURRENT_USER_ERROR:
+    case PROFILE_ERROR:
       return { ...state, loading: false, error: action.payload };
 
     default:

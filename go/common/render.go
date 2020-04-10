@@ -17,6 +17,7 @@ const (
 type Renderer interface {
 	Render(w http.ResponseWriter, status int, data interface{})
 	Error(w http.ResponseWriter, status int, message string)
+	InternalError(w http.ResponseWriter)
 }
 
 type htmlRenderer struct {
@@ -49,6 +50,10 @@ func (r *htmlRenderer) Error(w http.ResponseWriter, status int, message string) 
 	}
 }
 
+func (r *htmlRenderer) InternalError(w http.ResponseWriter) {
+	r.Error(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+}
+
 type jsonRenderer struct {
 	renderer *render.Render
 }
@@ -77,4 +82,8 @@ func (r *jsonRenderer) Error(w http.ResponseWriter, status int, message string) 
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, internalErrorJSONString)
 	}
+}
+
+func (r *jsonRenderer) InternalError(w http.ResponseWriter) {
+	r.Error(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 }

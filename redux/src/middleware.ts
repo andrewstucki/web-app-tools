@@ -3,14 +3,14 @@ import {
   AxiosInstance,
   AxiosError,
   AxiosResponse,
-  AxiosRequestConfig
+  AxiosRequestConfig,
 } from "axios";
 
 import {
   AUTHENTICATED_REQUEST,
   AuthenticatedRequest,
   AUTHENTICATED_LOG_OUT,
-  AuthenticatedRequestConfig
+  AuthenticatedRequestConfig,
 } from "./action";
 
 const callbacks = ["onUploadProgress", "onDownloadProgress"];
@@ -54,14 +54,14 @@ function setAuthorizationHeader(
     ...config,
     headers: {
       ...config.headers,
-      Authorization: "bearer " + token
-    }
+      Authorization: "bearer " + token,
+    },
   };
 }
 
 /* tslint:disable:no-any*/
 function setupCallbacks(dispatch: any, config: any, payload: any) {
-  callbacks.forEach(attribute => {
+  callbacks.forEach((attribute) => {
     const callback = payload[attribute];
     if (callback) {
       config[attribute] = (arg: any) => {
@@ -116,6 +116,9 @@ export function authenticatedMiddleware(
       .request(setAuthorizationHeader(config, token))
       .then((response: AxiosResponse<any>) => {
         tryRefreshTokenFromHeaders(response.headers);
+        if (payload.convertData) {
+          response.data = payload.convertData(response.data);
+        }
         const actionToDispatch = payload.onResponse(response);
         return actionToDispatch && dispatch(actionToDispatch);
       })

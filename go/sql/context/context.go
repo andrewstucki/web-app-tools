@@ -23,6 +23,15 @@ func FromContext(ctx context.Context) *sqlx.Tx {
 	return tx.(*sqlx.Tx)
 }
 
+// StartTx starts a transaction and injects it into the context
+func StartTx(ctx context.Context, db *sqlx.DB) (*sqlx.Tx, context.Context, error) {
+	tx, err := db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	return tx, WithTransaction(ctx, tx), nil
+}
+
 // QueryContext returns something that can query or exec
 type QueryContext interface {
 	sqlx.QueryerContext

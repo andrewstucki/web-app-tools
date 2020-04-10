@@ -1,57 +1,57 @@
-import { User, ApiError } from "./models";
+import { ProfileResponse, APIError, createProfileResponseFrom } from "./models";
 
-import { authenticatedRequest } from "@andrewstucki/google-oauth-tools-middleware";
+import { authenticatedRequest } from "@andrewstucki/web-app-tools-middleware";
 import { AxiosError, AxiosResponse } from "axios";
 
-export const CURRENT_USER_INIT = "CURRENT_USER_INIT";
-export const CURRENT_USER_SUCCESS = "CURRENT_USER_SUCCESS";
-export const CURRENT_USER_ERROR = "CURRENT_USER_ERROR";
+export const PROFILE_INIT = "PROFILE_INIT";
+export const PROFILE_SUCCESS = "PROFILE_SUCCESS";
+export const PROFILE_ERROR = "PROFILE_ERROR";
 
-type CurrentUserSuccess = {
-  type: typeof CURRENT_USER_SUCCESS;
-  payload: User;
+type ProfileSuccess = {
+  type: typeof PROFILE_SUCCESS;
+  payload: ProfileResponse;
 };
-export const currentUserSuccess = (user: User): CurrentUserSuccess => ({
-  type: CURRENT_USER_SUCCESS,
-  payload: user
+export const profileSuccess = (profile: ProfileResponse): ProfileSuccess => ({
+  type: PROFILE_SUCCESS,
+  payload: profile,
 });
 
-type CurrentUserError = {
-  type: typeof CURRENT_USER_ERROR;
+type ProfileError = {
+  type: typeof PROFILE_ERROR;
   payload: Error;
 };
-export const currentUserError = (error: Error): CurrentUserError => ({
-  type: CURRENT_USER_ERROR,
-  payload: error
+export const profileError = (error: Error): ProfileError => ({
+  type: PROFILE_ERROR,
+  payload: error,
 });
 
-type CurrentUserInit = {
-  type: typeof CURRENT_USER_INIT;
+type ProfileInit = {
+  type: typeof PROFILE_INIT;
 };
-export const currentUserInit = (): CurrentUserInit => ({
-  type: CURRENT_USER_INIT
+export const profileInit = (): ProfileInit => ({
+  type: PROFILE_INIT,
 });
 
-export const getCurrentUser = () => {
-  return authenticatedRequest<User, ApiError>({
+export const getProfile = () => {
+  return authenticatedRequest<ProfileResponse, APIError>({
     config: {
-      url: "/api/v1/me"
+      url: "/api/v1/me",
     },
-    onStart: () => currentUserInit(),
-    onError: (error: AxiosError<ApiError>) => {
+    onStart: () => profileInit(),
+    onError: (error: AxiosError<APIError>) => {
       const response = error.response;
-      if (response) return currentUserError(new Error(response.data.error));
+      if (response) return profileError(new Error(response.data.reason));
       if (error.request) {
-        return currentUserError(new Error("no response received"));
+        return profileError(new Error("no response received"));
       }
-      return currentUserError(error);
+      return profileError(error);
     },
-    onResponse: (response: AxiosResponse<User>) =>
-      currentUserSuccess(response.data)
+    convertData: (data: any) => createProfileResponseFrom(data),
+    onResponse: (response: AxiosResponse<ProfileResponse>) => profileSuccess(response.data),
   });
 };
 
 export type RootAction =
-  | CurrentUserInit
-  | CurrentUserSuccess
-  | CurrentUserError;
+  | ProfileInit
+  | ProfileSuccess
+  | ProfileError;

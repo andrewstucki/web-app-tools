@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strings"
+	"sync"
 
 	rice "github.com/GeertJohan/go.rice"
 	"github.com/go-chi/chi"
@@ -69,28 +71,87 @@ type Config struct {
 	SecretKey      string
 	Domains        []string
 	Setup          func(config *SetupConfig)
-	GetCurrentUser func(ctx context.Context, queryer sqlContext.QueryContext, claimsOrToken *ClaimsOrToken) (interface{}, error)
-	OnLogin        func(config *SetupConfig, claims *verifier.StandardClaims) error
+	GetCurrentUser func(ctx context.Context, claimsOrToken *ClaimsOrToken) (interface{}, error)
+	OnFirstUser    func(ctx context.Context, claims *verifier.StandardClaims) error
+	OnLogin        func(ctx context.Context, claims *verifier.StandardClaims) error
 }
 
 type wrappedCallbacks struct {
 	*callbacks.LocalStorageCallbacks
-	config *SetupConfig
-	hook   func(config *SetupConfig, claims *verifier.StandardClaims) error
+	config      *SetupConfig
+	initialHook func(ctx context.Context, claims *verifier.StandardClaims) error
+	hook        func(ctx context.Context, claims *verifier.StandardClaims) error
+
+	mutex       sync.Mutex
+	initialized bool
 }
 
-func newCallbacks(config *SetupConfig, hook func(config *SetupConfig, claims *verifier.StandardClaims) error) *wrappedCallbacks {
-	return &wrappedCallbacks{
-		LocalStorageCallbacks: callbacks.NewLocalStorageCallbacks(),
-		config:                config,
-		hook:                  hook,
+func (c *wrappedCallbacks) checkAndInitialize(claims *verifier.StandardClaims) error {
+	tx, ctx, err := sqlContext.StartTx(context.Background(), c.config.DB)
+	if err != nil {
+		return err
 	}
+	if err := tx.GetContext(ctx, &c.initialized, "SELECT initialized FROM site_settings"); err != nil {
+		c.config.Logger.Error().Err(err).Msg("error checking site settings")
+		tx.Rollback()
+		return err
+	}
+	if !c.initialized {
+		if err := c.initialHook(ctx, claims); err != nil {
+			c.config.Logger.Error().Err(err).Msg("error running first user callback")
+			tx.Rollback()
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, "UPDATE site_settings SET initialized = TRUE"); err != nil {
+			c.config.Logger.Error().Err(err).Msg("error updating site settings")
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.config.Logger.Error().Err(err).Msg("error committing first user transaction")
+		tx.Rollback()
+		return err
+	}
+	return nil
+}
+
+func (c *wrappedCallbacks) callHook(claims *verifier.StandardClaims) error {
+	tx, ctx, err := sqlContext.StartTx(context.Background(), c.config.DB)
+	if err != nil {
+		return err
+	}
+	if err := c.hook(ctx, claims); err != nil {
+		c.config.Logger.Error().Err(err).Msg("error running login callback")
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		c.config.Logger.Error().Err(err).Msg("error committing login transaction")
+		tx.Rollback()
+		return err
+	}
+	return nil
 }
 
 func (c *wrappedCallbacks) OnSuccess(w http.ResponseWriter, location, raw string, claims *verifier.StandardClaims) {
-	if c.hook != nil {
-		if err := c.hook(c.config, claims); err != nil {
-			c.config.Logger.Error().Err(err).Msg("error running login callback")
+	ran := false
+	if c.initialHook != nil {
+		c.mutex.Lock()
+		defer c.mutex.Unlock()
+
+		if !c.initialized {
+			if err := c.checkAndInitialize(claims); err != nil {
+				c.LocalStorageCallbacks.OnError(w, err)
+				return
+			}
+			c.initialized = true
+			ran = true
+		}
+	}
+	if !ran && c.hook != nil {
+		if err := c.callHook(claims); err != nil {
 			c.LocalStorageCallbacks.OnError(w, err)
 			return
 		}
@@ -149,7 +210,7 @@ func RunServer(config Config) {
 			}),
 			tokenUser(handler),
 			sqlMiddleware.Transaction(db, render, logger),
-			currentUser(db, handler, render, logger, config.GetCurrentUser),
+			currentUser(handler, render, logger, config.GetCurrentUser),
 		)
 		setupConfig.Router = router
 		setupConfig.Handler = handler
@@ -171,7 +232,16 @@ func RunServer(config Config) {
 
 func initializeOAuth(setup *SetupConfig, config Config) (*oauth.Handler, error) {
 	verifier := verifier.NewVerifier()
-	if len(config.Domains) > 0 {
+	domains := config.Domains
+	if len(config.Domains) == 0 {
+		if envDomains := strings.TrimSpace(os.Getenv("GOOGLE_DOMAINS")); envDomains != "" {
+			domains = strings.Split(envDomains, ",")
+			for i, domain := range domains {
+				domains[i] = strings.TrimSpace(domain)
+			}
+		}
+	}
+	if len(domains) > 0 {
 		verifier = verifier.WithDomains(config.Domains...)
 	}
 
@@ -199,7 +269,12 @@ func initializeOAuth(setup *SetupConfig, config Config) (*oauth.Handler, error) 
 		SecretKey:    secretKey,
 		Verifier:     verifier,
 		TokenManager: state.NewTokenManager(setup.DB),
-		Callbacks:    newCallbacks(setup, config.OnLogin),
-		Logger:       &setup.Logger,
+		Callbacks: &wrappedCallbacks{
+			LocalStorageCallbacks: callbacks.NewLocalStorageCallbacks(),
+			config:                setup,
+			initialHook:           config.OnFirstUser,
+			hook:                  config.OnLogin,
+		},
+		Logger: &setup.Logger,
 	})
 }

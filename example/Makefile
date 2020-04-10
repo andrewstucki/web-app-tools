@@ -2,10 +2,12 @@
 deps:
 	@echo "Deps"
 	@brew install overmind
+	@brew install golang-migrate
 	@go get github.com/markbates/refresh
 	@go get github.com/GeertJohan/go.rice/rice
 	@go get github.com/volatiletech/sqlboiler
 	@go get github.com/volatiletech/sqlboiler/drivers/sqlboiler-psql
+	@go get github.com/andrewstucki/typescriptify-golang-structs/tscriptify
 	@yarn --cwd frontend
 
 .PHONY: dev
@@ -17,6 +19,20 @@ dev:
 test:
 	yarn --cwd frontend test --watchAll=false
 	go test ./...
+
+.PHONY: models
+models:
+	sqlboiler --struct-tag-casing camel --tag-ignore google_id --no-hooks --no-rows-affected --no-tests --wipe -c .sqlboiler.toml psql
+
+.PHONY: typings
+typings:
+	tscriptify -package=example/payload -target=frontend/src/models.ts \
+		APIError \
+		ProfileResponse
+
+.PHONY: migrate
+migrate:
+	migrate -database 'postgres://postgres:postgres@localhost:5433/example-dev?sslmode=disable' -path ./migrations up
 
 .PHONY: build
 build:

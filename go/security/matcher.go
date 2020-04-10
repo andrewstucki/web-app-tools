@@ -55,6 +55,18 @@ func (e *Evaluator) Can(ctx context.Context, action Action, resource Resource) (
 	return false, nil
 }
 
+// Policies returns policies for the user
+func (e *Evaluator) Policies(ctx context.Context) ([]Policy, error) {
+	if e.namespaceManager == nil {
+		return nil, nil
+	}
+	roles, err := e.namespaceManager.RolesFor(ctx, globalNamespace, e.namespace, e.user)
+	if err != nil {
+		return nil, err
+	}
+	return globalRoleManager.getPolicies(roles...), nil
+}
+
 // pathMatch determines whether path matches the pattern, it matches
 // on placeholders
 func pathMatch(path, pattern string) bool {

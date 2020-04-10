@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
+	uuid "github.com/satori/go.uuid"
 	"github.com/volatiletech/sqlboiler/boil"
 	"github.com/volatiletech/sqlboiler/queries"
 	"github.com/volatiletech/sqlboiler/queries/qm"
@@ -23,8 +24,8 @@ import (
 
 // UserToken is an object representing the database table.
 type UserToken struct {
-	ID     string `boil:"id" json:"id" toml:"id" yaml:"id"`
-	UserID string `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
+	ID     uuid.UUID `boil:"id" json:"id" toml:"id" yaml:"id"`
+	UserID uuid.UUID `boil:"user_id" json:"userID" toml:"userID" yaml:"userID"`
 
 	R *userTokenR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L userTokenL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -40,28 +41,33 @@ var UserTokenColumns = struct {
 
 // Generated where
 
-type whereHelperstring struct{ field string }
+type whereHelperuuid_UUID struct{ field string }
 
-func (w whereHelperstring) EQ(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperstring) NEQ(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperstring) LT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperstring) LTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperstring) GT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperstring) GTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-func (w whereHelperstring) IN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+func (w whereHelperuuid_UUID) EQ(x uuid.UUID) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.EQ, x)
+}
+func (w whereHelperuuid_UUID) NEQ(x uuid.UUID) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.NEQ, x)
+}
+func (w whereHelperuuid_UUID) LT(x uuid.UUID) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelperuuid_UUID) LTE(x uuid.UUID) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelperuuid_UUID) GT(x uuid.UUID) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelperuuid_UUID) GTE(x uuid.UUID) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
 var UserTokenWhere = struct {
-	ID     whereHelperstring
-	UserID whereHelperstring
+	ID     whereHelperuuid_UUID
+	UserID whereHelperuuid_UUID
 }{
-	ID:     whereHelperstring{field: "\"user_tokens\".\"id\""},
-	UserID: whereHelperstring{field: "\"user_tokens\".\"user_id\""},
+	ID:     whereHelperuuid_UUID{field: "\"user_tokens\".\"id\""},
+	UserID: whereHelperuuid_UUID{field: "\"user_tokens\".\"user_id\""},
 }
 
 // UserTokenRels is where relationship names are stored.
@@ -213,7 +219,9 @@ func (userTokenL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular
 		if object.R == nil {
 			object.R = &userTokenR{}
 		}
-		args = append(args, object.UserID)
+		if !queries.IsNil(object.UserID) {
+			args = append(args, object.UserID)
+		}
 
 	} else {
 	Outer:
@@ -223,12 +231,14 @@ func (userTokenL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular
 			}
 
 			for _, a := range args {
-				if a == obj.UserID {
+				if queries.Equal(a, obj.UserID) {
 					continue Outer
 				}
 			}
 
-			args = append(args, obj.UserID)
+			if !queries.IsNil(obj.UserID) {
+				args = append(args, obj.UserID)
+			}
 
 		}
 	}
@@ -275,7 +285,7 @@ func (userTokenL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular
 
 	for _, local := range slice {
 		for _, foreign := range resultSlice {
-			if local.UserID == foreign.ID {
+			if queries.Equal(local.UserID, foreign.ID) {
 				local.R.User = foreign
 				if foreign.R == nil {
 					foreign.R = &userR{}
@@ -316,7 +326,7 @@ func (o *UserToken) SetUser(ctx context.Context, exec boil.ContextExecutor, inse
 		return errors.Wrap(err, "failed to update local table")
 	}
 
-	o.UserID = related.ID
+	queries.Assign(&o.UserID, related.ID)
 	if o.R == nil {
 		o.R = &userTokenR{
 			User: related,
@@ -344,7 +354,7 @@ func UserTokens(mods ...qm.QueryMod) userTokenQuery {
 
 // FindUserToken retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindUserToken(ctx context.Context, exec boil.ContextExecutor, iD string, selectCols ...string) (*UserToken, error) {
+func FindUserToken(ctx context.Context, exec boil.ContextExecutor, iD uuid.UUID, selectCols ...string) (*UserToken, error) {
 	userTokenObj := &UserToken{}
 
 	sel := "*"
@@ -773,7 +783,7 @@ func (o *UserTokenSlice) ReloadAll(ctx context.Context, exec boil.ContextExecuto
 }
 
 // UserTokenExists checks if the UserToken row exists.
-func UserTokenExists(ctx context.Context, exec boil.ContextExecutor, iD string) (bool, error) {
+func UserTokenExists(ctx context.Context, exec boil.ContextExecutor, iD uuid.UUID) (bool, error) {
 	var exists bool
 	sql := "select exists(select 1 from \"user_tokens\" where \"id\"=$1 limit 1)"
 

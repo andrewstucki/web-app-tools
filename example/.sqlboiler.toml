@@ -1,8 +1,16 @@
 [psql]
   dbname = "example-dev"
   host   = "localhost"
-  port   = 5432
+  port   = 5433
   user   = "postgres"
   pass   = "postgres"
-  blacklist = ["schema_migrations", "memberships", "tokens"]
+  blacklist = ["schema_migrations", "memberships", "tokens", "site_settings"]
   sslmode = "disable"
+
+[[types]]
+  [types.match]
+    db_type = "uuid"
+  [types.replace]
+    type = "uuid.UUID"
+  [types.imports]
+    third_party = ['uuid "github.com/satori/go.uuid"']
