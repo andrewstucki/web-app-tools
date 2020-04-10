@@ -69,7 +69,7 @@ type Config struct {
 	SecretKey      string
 	Domains        []string
 	Setup          func(config *SetupConfig)
-	GetCurrentUser func(ctx context.Context, queryer sqlContext.QueryContext, claims *verifier.StandardClaims) (interface{}, error)
+	GetCurrentUser func(ctx context.Context, queryer sqlContext.QueryContext, claimsOrToken *ClaimsOrToken) (interface{}, error)
 	OnLogin        func(config *SetupConfig, claims *verifier.StandardClaims) error
 }
 
@@ -144,9 +144,10 @@ func RunServer(config Config) {
 		router.Use(
 			middleware.RequestLogger(logger),
 			middleware.Recoverer(render, logger),
-			handler.AuthenticationMiddleware(func(w http.ResponseWriter) {
+			handler.AuthenticationMiddleware(false, func(w http.ResponseWriter) {
 				render.Error(w, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
 			}),
+			tokenUser(handler),
 			sqlMiddleware.Transaction(db, render, logger),
 			currentUser(db, handler, render, logger, config.GetCurrentUser),
 		)

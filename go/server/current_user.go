@@ -31,12 +31,21 @@ func setCurrentUserFn(ctx context.Context, fn func(ctx context.Context) (interfa
 	return context.WithValue(ctx, &currentUserKey, fn)
 }
 
+// ClaimsOrToken represents either claims found
+// or and API token found
+type ClaimsOrToken struct {
+	Claims *verifier.StandardClaims
+	Token  string
+}
+
 // currentUser is a middleware that injects the current user into the context
-func currentUser(db *sqlx.DB, handler *oauth.Handler, renderer common.Renderer, logger zerolog.Logger, getter func(ctx context.Context, queryer sqlContext.QueryContext, claims *verifier.StandardClaims) (interface{}, error)) func(next http.Handler) http.Handler {
+func currentUser(db *sqlx.DB, handler *oauth.Handler, renderer common.Renderer, logger zerolog.Logger, getter func(ctx context.Context, queryer sqlContext.QueryContext, claims *ClaimsOrToken) (interface{}, error)) func(next http.Handler) http.Handler {
 	fn := func(ctx context.Context) (interface{}, error) {
-		claims := handler.Claims(ctx)
-		if claims != nil {
-			return getter(ctx, sqlContext.GetQueryer(ctx, db), claims)
+		if claims := handler.Claims(ctx); claims != nil {
+			return getter(ctx, sqlContext.GetQueryer(ctx, db), &ClaimsOrToken{Claims: claims})
+		}
+		if token := getToken(ctx); token != "" {
+			return getter(ctx, sqlContext.GetQueryer(ctx, db), &ClaimsOrToken{Token: token})
 		}
 		return nil, nil
 	}

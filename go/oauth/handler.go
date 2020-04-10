@@ -208,13 +208,17 @@ func (h *Handler) handleEnd(w http.ResponseWriter, r *http.Request) {
 
 // AuthenticationMiddleware provides a mechanism for validating tokens passed
 // in Authorization headers
-func (h *Handler) AuthenticationMiddleware(unauthorizedHandler func(w http.ResponseWriter)) func(http.Handler) http.Handler {
+func (h *Handler) AuthenticationMiddleware(requireAuth bool, unauthorizedHandler func(w http.ResponseWriter)) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
 			if len(auth) != 2 || strings.ToLower(auth[0]) != "bearer" {
-				h.logger.Info().Msg("no authorization headers present")
-				unauthorizedHandler(w)
+				if requireAuth {
+					h.logger.Info().Msg("no authorization headers present")
+					unauthorizedHandler(w)
+					return
+				}
+				next.ServeHTTP(w, r)
 				return
 			}
 
@@ -222,7 +226,11 @@ func (h *Handler) AuthenticationMiddleware(unauthorizedHandler func(w http.Respo
 			// bad claims == bad token
 			if err := h.verifier.VerifyIDToken(auth[1], tokenClaims); err != nil {
 				h.logger.Warn().Err(err).Msg("failed to verify token")
-				unauthorizedHandler(w)
+				if requireAuth {
+					unauthorizedHandler(w)
+					return
+				}
+				next.ServeHTTP(w, r)
 				return
 			}
 

@@ -1,7 +1,7 @@
 package main
 
-// go:generate rice embed-go
-// go:generate sqlboiler --no-hooks --no-rows-affected --no-tests --wipe -c .sqlboiler.toml psql
+//go:generate rice embed-go
+//go:generate sqlboiler --no-hooks --no-rows-affected --no-tests --wipe -c .sqlboiler.toml psql
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 
 	rice "github.com/GeertJohan/go.rice"
 	"github.com/volatiletech/sqlboiler/boil"
+	"github.com/volatiletech/sqlboiler/queries/qm"
 
 	"github.com/andrewstucki/web-app-tools/go/oauth/verifier"
 	"github.com/andrewstucki/web-app-tools/go/server"
@@ -28,15 +29,20 @@ func main() {
 			render = config.Render
 			config.Router.Get("/v1/me", me)
 		},
-		GetCurrentUser: func(ctx context.Context, queryer sqlContext.QueryContext, claims *verifier.StandardClaims) (interface{}, error) {
-			user, err := models.Users(models.UserWhere.GoogleID.EQ(claims.Subject)).One(ctx, queryer)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					return nil, nil
-				}
-				return nil, err
+		GetCurrentUser: func(ctx context.Context, queryer sqlContext.QueryContext, claimsOrToken *server.ClaimsOrToken) (interface{}, error) {
+			var user *models.User
+			var err error
+			if claimsOrToken.Claims != nil {
+				claims := claimsOrToken.Claims
+				user, err = models.Users(models.UserWhere.GoogleID.EQ(claims.Subject)).One(ctx, queryer)
+			} else {
+				token := claimsOrToken.Token
+				user, err = models.Users(qm.Load(models.UserRels.UserTokens, models.UserTokenWhere.ID.EQ(token))).One(ctx, queryer)
 			}
-			return user, nil
+			if err != nil && err == sql.ErrNoRows {
+				return nil, nil
+			}
+			return user, err
 		},
 		OnLogin: func(config *server.SetupConfig, claims *verifier.StandardClaims) error {
 			user := models.User{Email: claims.Email, GoogleID: claims.Subject}
