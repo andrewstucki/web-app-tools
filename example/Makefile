@@ -4,6 +4,8 @@ deps:
 	@brew install overmind
 	@go get github.com/markbates/refresh
 	@go get github.com/GeertJohan/go.rice/rice
+	@go get github.com/volatiletech/sqlboiler
+	@go get github.com/volatiletech/sqlboiler/drivers/sqlboiler-psql
 	@yarn --cwd frontend
 
 .PHONY: dev

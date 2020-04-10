@@ -27,7 +27,7 @@ const successTemplate = `
 
 var (
 	defaultSuccessTemplate *template.Template
-	contextKey             = struct{}{}
+	contextKey             = "oauth-context-key"
 )
 
 func init() {
@@ -267,7 +267,7 @@ func (h *Handler) AuthenticationMiddleware(unauthorizedHandler func(w http.Respo
 			}
 
 		SET_CONTEXT:
-			ctx := context.WithValue(r.Context(), contextKey, tokenClaims)
+			ctx := context.WithValue(r.Context(), &contextKey, tokenClaims)
 			next.ServeHTTP(w, r.Clone(ctx))
 		})
 	}
@@ -275,7 +275,7 @@ func (h *Handler) AuthenticationMiddleware(unauthorizedHandler func(w http.Respo
 
 // Claims returns claims if they exist on the context
 func (h *Handler) Claims(ctx context.Context) *verifier.StandardClaims {
-	claims := ctx.Value(contextKey)
+	claims := ctx.Value(&contextKey)
 	if claims == nil {
 		return nil
 	}

@@ -31,7 +31,7 @@ func NewBox(migrations *rice.Box) *Box {
 // Initialize reads the rice-box for all migrations
 func (b *Box) Initialize() error {
 	initial := true
-	return b.box.Walk(".", func(path string, info os.FileInfo, err error) error {
+	return b.box.Walk("", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

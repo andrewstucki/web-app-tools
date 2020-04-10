@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"os"
 
@@ -8,16 +9,27 @@ import (
 	"github.com/go-chi/chi"
 	migrate "github.com/golang-migrate/migrate/v4"
 	"github.com/jmoiron/sqlx"
+	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 
 	"github.com/andrewstucki/web-app-tools/go/common"
 	"github.com/andrewstucki/web-app-tools/go/oauth"
 	"github.com/andrewstucki/web-app-tools/go/oauth/callbacks"
 	"github.com/andrewstucki/web-app-tools/go/oauth/verifier"
+	"github.com/andrewstucki/web-app-tools/go/security"
+	"github.com/andrewstucki/web-app-tools/go/server/middleware"
 	"github.com/andrewstucki/web-app-tools/go/sql"
+	sqlContext "github.com/andrewstucki/web-app-tools/go/sql/context"
+	sqlMiddleware "github.com/andrewstucki/web-app-tools/go/sql/middleware"
 	"github.com/andrewstucki/web-app-tools/go/sql/migrator"
+	sqlSecurity "github.com/andrewstucki/web-app-tools/go/sql/security"
 	"github.com/andrewstucki/web-app-tools/go/sql/state"
 )
+
+func init() {
+	// ignore the error if no .env file is found
+	godotenv.Load()
+}
 
 type assetServer struct {
 	*rice.Box
@@ -47,17 +59,18 @@ type SetupConfig struct {
 
 // Config provides the configuration for the server
 type Config struct {
-	Migrations   *rice.Box
-	Assets       *rice.Box
-	HostPort     string
-	DatabaseURL  string
-	ClientID     string
-	ClientSecret string
-	BaseURL      string
-	SecretKey    string
-	Domains      []string
-	Setup        func(config *SetupConfig)
-	OnLogin      func(config *SetupConfig, claims *verifier.StandardClaims) error
+	Migrations     *rice.Box
+	Assets         *rice.Box
+	HostPort       string
+	DatabaseURL    string
+	ClientID       string
+	ClientSecret   string
+	BaseURL        string
+	SecretKey      string
+	Domains        []string
+	Setup          func(config *SetupConfig)
+	GetCurrentUser func(ctx context.Context, queryer sqlContext.QueryContext, claims *verifier.StandardClaims) (interface{}, error)
+	OnLogin        func(config *SetupConfig, claims *verifier.StandardClaims) error
 }
 
 type wrappedCallbacks struct {
@@ -93,7 +106,12 @@ func RunServer(config Config) {
 		logger.Fatal().Msg("must specify migrations")
 	}
 
-	migrator, err := migrator.NewBoxMigrator(config.Migrations, config.DatabaseURL)
+	dbURL := config.DatabaseURL
+	if dbURL == "" {
+		dbURL = os.Getenv("POSTGRES_URL")
+	}
+
+	migrator, err := migrator.NewBoxMigrator(config.Migrations, dbURL)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to connect to initialize migrator")
 	}
@@ -101,10 +119,12 @@ func RunServer(config Config) {
 		logger.Fatal().Err(err).Msg("failed to run migrations")
 	}
 
-	db, err := sql.Connect(config.DatabaseURL)
+	db, err := sql.Connect(dbURL)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to connect to database")
 	}
+
+	security.RegisterManager(sqlSecurity.NewNamespaceManager(db))
 
 	render := common.NewJSONRenderer()
 	router := chi.NewRouter()
@@ -121,19 +141,29 @@ func RunServer(config Config) {
 
 	router.Mount("/oauth", handler)
 	router.Route("/api", func(router chi.Router) {
+		router.Use(
+			middleware.RequestLogger(logger),
+			middleware.Recoverer(render, logger),
+			handler.AuthenticationMiddleware(func(w http.ResponseWriter) {
+				render.Error(w, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
+			}),
+			sqlMiddleware.Transaction(db, render, logger),
+			currentUser(db, handler, render, logger, config.GetCurrentUser),
+		)
 		setupConfig.Router = router
 		setupConfig.Handler = handler
-
-		router.Use(handler.AuthenticationMiddleware(func(w http.ResponseWriter) {
-			render.Error(w, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized))
-		}))
 		config.Setup(setupConfig)
 	})
 	if config.Assets != nil {
 		router.Handle("/*", http.FileServer(newAssetServer(config.Assets)))
 	}
 
-	if err := http.ListenAndServe(config.HostPort, router); err != nil {
+	hostPort := config.HostPort
+	if hostPort == "" {
+		hostPort = os.Getenv("HOST_PORT")
+	}
+
+	if err := http.ListenAndServe(hostPort, router); err != nil {
 		logger.Fatal().Err(err).Msg("failed to run server")
 	}
 }
@@ -144,11 +174,28 @@ func initializeOAuth(setup *SetupConfig, config Config) (*oauth.Handler, error) 
 		verifier = verifier.WithDomains(config.Domains...)
 	}
 
+	clientID := config.ClientID
+	if clientID == "" {
+		clientID = os.Getenv("GOOGLE_CLIENT_ID")
+	}
+	clientSecret := config.ClientSecret
+	if clientSecret == "" {
+		clientSecret = os.Getenv("GOOGLE_CLIENT_SECRET")
+	}
+	baseURL := config.BaseURL
+	if baseURL == "" {
+		baseURL = os.Getenv("BASE_URL")
+	}
+	secretKey := config.SecretKey
+	if secretKey == "" {
+		secretKey = os.Getenv("JWT_SECRET")
+	}
+
 	return oauth.New(&oauth.Config{
-		ClientID:     config.ClientID,
-		ClientSecret: config.ClientSecret,
-		MountURL:     config.BaseURL + "/oauth",
-		SecretKey:    config.SecretKey,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		MountURL:     baseURL + "/oauth",
+		SecretKey:    secretKey,
 		Verifier:     verifier,
 		TokenManager: state.NewTokenManager(setup.DB),
 		Callbacks:    newCallbacks(setup, config.OnLogin),

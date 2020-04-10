@@ -1,0 +1,8 @@
+[psql]
+  dbname = "example-dev"
+  host   = "localhost"
+  port   = 5432
+  user   = "postgres"
+  pass   = "postgres"
+  blacklist = ["schema_migrations", "memberships", "tokens"]
+  sslmode = "disable"
