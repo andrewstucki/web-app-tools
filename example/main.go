@@ -1,7 +1,7 @@
 package main
 
 //go:generate rice embed-go
-//go:generate sqlboiler --wipe -c .sqlboiler.toml psql
+//go:generate sqlboiler --no-tests --wipe -c .sqlboiler.toml psql
 
 import (
 	"context"
@@ -21,12 +21,6 @@ import (
 var (
 	logger zerolog.Logger
 	render common.Renderer
-
-	persistUserQuery = `
-	INSERT INTO users (email, google_id)
-		VALUES ($1, $2)
-	ON CONFLICT DO NOTHING;
-	`
 )
 
 func main() {
@@ -52,8 +46,8 @@ func main() {
 			return user, nil
 		},
 		OnLogin: func(config *server.SetupConfig, claims *verifier.StandardClaims) error {
-			_, err := config.DB.Exec(persistUserQuery, claims.Email, claims.Subject)
-			return err
+			user := models.User{Email: claims.Email, GoogleID: claims.Subject}
+			return user.Upsert(context.Background(), config.DB.DB, false, nil, boil.Infer(), boil.Infer())
 		},
 	})
 }
