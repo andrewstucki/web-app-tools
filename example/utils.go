@@ -5,7 +5,15 @@ import (
 	"example/models"
 	"net/http"
 
+	"github.com/rs/zerolog"
+
+	"github.com/andrewstucki/web-app-tools/go/common"
 	"github.com/andrewstucki/web-app-tools/go/server"
+)
+
+var (
+	logger zerolog.Logger
+	render common.Renderer
 )
 
 // WithCurrentUser retrieves the current logged in user

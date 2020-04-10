@@ -1,7 +1,7 @@
 package main
 
-//go:generate rice embed-go
-//go:generate sqlboiler --no-tests --wipe -c .sqlboiler.toml psql
+// go:generate rice embed-go
+// go:generate sqlboiler --no-hooks --no-rows-affected --no-tests --wipe -c .sqlboiler.toml psql
 
 import (
 	"context"
@@ -9,18 +9,11 @@ import (
 	"example/models"
 
 	rice "github.com/GeertJohan/go.rice"
-	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/boil"
 
-	"github.com/andrewstucki/web-app-tools/go/common"
 	"github.com/andrewstucki/web-app-tools/go/oauth/verifier"
 	"github.com/andrewstucki/web-app-tools/go/server"
 	sqlContext "github.com/andrewstucki/web-app-tools/go/sql/context"
-)
-
-var (
-	logger zerolog.Logger
-	render common.Renderer
 )
 
 func main() {
