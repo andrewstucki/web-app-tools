@@ -19,6 +19,9 @@ function initialize() {
   );
 }
 
+// make sure we redirect to our overridden host
+// location in dev to get the oauth callbacks
+// and proxies to work nicely together
 if (process.env.NODE_ENV === 'development') {
   const targetHost = process.env.REACT_APP_BASE_URL;
   const currentHost = `${window.location.protocol}//${window.location.host}`;

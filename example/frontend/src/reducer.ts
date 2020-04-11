@@ -7,6 +7,7 @@ import {
 import { User, Policy } from './models';
 
 export type ProfileState = {
+  readonly isAdmin: boolean;
   readonly user: User | null;
   readonly policies: Policy[];
   readonly error: Error | null;
@@ -14,6 +15,7 @@ export type ProfileState = {
 };
 
 export const initialState = {
+  isAdmin: false,
   user: null,
   policies: [],
   error: null,

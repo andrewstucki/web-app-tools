@@ -41,6 +41,7 @@ exports[`App renders basic info given a user 1`] = `
   </table>
   <button
     onClick={[Function]}
+    type="button"
   >
     Log Out
   </button>

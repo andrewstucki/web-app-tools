@@ -3,7 +3,7 @@ package roles
 import "github.com/andrewstucki/web-app-tools/go/security"
 
 var (
-	// SuperAdminRole can do anything
+	// SuperAdminRole users can do anything
 	SuperAdminRole = security.Role{
 		Name: "super_admin",
 		Policies: []security.Policy{

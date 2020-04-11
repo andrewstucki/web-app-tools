@@ -21,6 +21,11 @@ test:
 	yarn --cwd frontend test --watchAll=false
 	go test ./...
 
+.PHONY: lint
+lint:
+	yarn --cwd frontend lint
+	golangci-lint run
+
 .PHONY: models
 models:
 	sqlboiler --struct-tag-casing camel --tag-ignore google_id --no-hooks --no-rows-affected --no-tests --wipe -c .sqlboiler.toml psql

@@ -15,4 +15,5 @@ type APIError struct {
 type ProfileResponse struct {
 	User     *models.User      `json:"user"`
 	Policies []security.Policy `json:"policies"`
+	IsAdmin  bool              `json:"isAdmin"`
 }

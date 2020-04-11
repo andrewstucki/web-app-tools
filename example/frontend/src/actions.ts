@@ -46,6 +46,8 @@ export const getProfile = () => {
       }
       return profileError(error);
     },
+    // because we want to ensure we have non-primitives
+    // parsed correctly we have to make sure to add this
     convertData: createProfileResponseFrom,
     onResponse: (response: AxiosResponse<ProfileResponse>) =>
       profileSuccess(response.data),
