@@ -1,20 +1,20 @@
-import reducer, { initialState } from "./reducer";
-import { profileInit, profileSuccess, profileError } from "./actions";
+import reducer, { initialState } from './reducer';
+import { profileInit, profileSuccess, profileError } from './actions';
 
-describe("reducer", () => {
-  it("tracks loading state", () => {
+describe('reducer', () => {
+  it('tracks loading state', () => {
     expect(reducer(initialState, profileInit()).loading).toEqual(true);
   });
 
-  it("handles profile data", () => {
+  it('handles profile data', () => {
     const payload = {
       user: {
-        id: "foo",
-        email: "bar@baz.com",
+        id: 'foo',
+        email: 'bar@baz.com',
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-      policies: [{ resource: "*", action: "*" }],
+      policies: [{ resource: '*', action: '*' }],
     };
     const state = reducer(
       { ...initialState, loading: true },
@@ -25,8 +25,8 @@ describe("reducer", () => {
     );
   });
 
-  it("handles profile errors", () => {
-    const error = new Error("foo bar");
+  it('handles profile errors', () => {
+    const error = new Error('foo bar');
     expect(reducer(initialState, profileError(error))).toEqual(
       expect.objectContaining({ error })
     );

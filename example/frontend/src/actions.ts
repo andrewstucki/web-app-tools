@@ -1,11 +1,11 @@
-import { ProfileResponse, APIError, createProfileResponseFrom } from "./models";
+import { authenticatedRequest } from '@andrewstucki/web-app-tools-middleware';
+import { AxiosError, AxiosResponse } from 'axios';
 
-import { authenticatedRequest } from "@andrewstucki/web-app-tools-middleware";
-import { AxiosError, AxiosResponse } from "axios";
+import { ProfileResponse, APIError, createProfileResponseFrom } from './models';
 
-export const PROFILE_INIT = "PROFILE_INIT";
-export const PROFILE_SUCCESS = "PROFILE_SUCCESS";
-export const PROFILE_ERROR = "PROFILE_ERROR";
+export const PROFILE_INIT = 'PROFILE_INIT';
+export const PROFILE_SUCCESS = 'PROFILE_SUCCESS';
+export const PROFILE_ERROR = 'PROFILE_ERROR';
 
 type ProfileSuccess = {
   type: typeof PROFILE_SUCCESS;
@@ -35,23 +35,21 @@ export const profileInit = (): ProfileInit => ({
 export const getProfile = () => {
   return authenticatedRequest<ProfileResponse, APIError>({
     config: {
-      url: "/api/v1/me",
+      url: '/api/v1/me',
     },
     onStart: () => profileInit(),
     onError: (error: AxiosError<APIError>) => {
-      const response = error.response;
+      const { response } = error;
       if (response) return profileError(new Error(response.data.reason));
       if (error.request) {
-        return profileError(new Error("no response received"));
+        return profileError(new Error('no response received'));
       }
       return profileError(error);
     },
     convertData: createProfileResponseFrom,
-    onResponse: (response: AxiosResponse<ProfileResponse>) => profileSuccess(response.data),
+    onResponse: (response: AxiosResponse<ProfileResponse>) =>
+      profileSuccess(response.data),
   });
 };
 
-export type RootAction =
-  | ProfileInit
-  | ProfileSuccess
-  | ProfileError;
+export type RootAction = ProfileInit | ProfileSuccess | ProfileError;

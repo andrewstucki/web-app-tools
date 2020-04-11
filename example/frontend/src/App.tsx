@@ -1,10 +1,11 @@
-import React, { useEffect } from "react";
+import React, { useEffect } from 'react';
 import moment from 'moment';
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "./store";
-import { User } from "./models";
-import { getProfile } from "./actions";
-import { authenticatedLogOut } from "@andrewstucki/web-app-tools-middleware";
+import { useDispatch, useSelector } from 'react-redux';
+import { authenticatedLogOut } from '@andrewstucki/web-app-tools-middleware';
+
+import { RootState } from './store';
+import { User } from './models';
+import { getProfile } from './actions';
 
 export const App = () => {
   const user = useSelector<RootState, User | null>(
@@ -39,6 +40,7 @@ export const App = () => {
           </tr>
         </table>
         <button
+          type="button"
           onClick={() => {
             dispatch(authenticatedLogOut());
           }}

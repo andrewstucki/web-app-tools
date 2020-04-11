@@ -3,8 +3,8 @@ import {
   PROFILE_INIT,
   PROFILE_SUCCESS,
   PROFILE_ERROR,
-} from "./actions";
-import { User, Policy } from "./models";
+} from './actions';
+import { User, Policy } from './models';
 
 export type ProfileState = {
   readonly user: User | null;

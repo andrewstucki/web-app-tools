@@ -1,10 +1,10 @@
-import React from "react";
-import ReactDOM from "react-dom";
-import { Provider } from "react-redux";
-import axios from "axios";
+import React from 'react';
+import ReactDOM from 'react-dom';
+import { Provider } from 'react-redux';
+import axios from 'axios';
 
-import initializeStore from "./store";
-import { App } from "./App";
+import initializeStore from './store';
+import { App } from './App';
 
 function initialize() {
   const store = initializeStore(axios.create());
@@ -15,13 +15,13 @@ function initialize() {
         <App />
       </React.StrictMode>
     </Provider>,
-    document.getElementById("root")
+    document.getElementById('root')
   );
 }
 
-if (process.env.NODE_ENV === "development") {
+if (process.env.NODE_ENV === 'development') {
   const targetHost = process.env.REACT_APP_BASE_URL;
-  const currentHost = window.location.protocol + "//" + window.location.host;
+  const currentHost = `${window.location.protocol}//${window.location.host}`;
   if (targetHost && currentHost !== targetHost) {
     window.location.href = targetHost;
   } else {
