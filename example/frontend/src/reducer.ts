@@ -2,7 +2,7 @@ import {
   RootAction,
   PROFILE_INIT,
   PROFILE_SUCCESS,
-  PROFILE_ERROR
+  PROFILE_ERROR,
 } from "./actions";
 import { User, Policy } from "./models";
 
@@ -13,14 +13,14 @@ export type ProfileState = {
   readonly loading: boolean;
 };
 
-const initialState = {
+export const initialState = {
   user: null,
   policies: [],
   error: null,
-  loading: false
+  loading: false,
 };
 
-export default function(
+export default function (
   state: ProfileState = initialState,
   action: RootAction
 ): ProfileState {
@@ -29,7 +29,11 @@ export default function(
       return { ...initialState, loading: true };
 
     case PROFILE_SUCCESS:
-      return { ...state, loading: false, user: action.payload.user, policies: action.payload.policies };
+      return {
+        ...state,
+        loading: false,
+        ...action.payload,
+      };
 
     case PROFILE_ERROR:
       return { ...state, loading: false, error: action.payload };
