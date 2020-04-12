@@ -39,6 +39,7 @@ typings:
 .PHONY: migrate
 migrate:
 	migrate -database 'postgres://postgres:postgres@localhost:5433/example-dev?sslmode=disable' -path ./migrations up
+	migrate -database 'postgres://postgres:postgres@localhost:5434/example-test?sslmode=disable' -path ./migrations up
 
 .PHONY: build
 build:

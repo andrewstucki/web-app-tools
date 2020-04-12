@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   database:
     image: "postgres:alpine"
@@ -8,3 +8,11 @@ services:
       POSTGRES_DB: example-dev
     ports:
       - 5433:5432
+  test_database:
+    image: "postgres:alpine"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: example-test
+    ports:
+      - 5434:5432

@@ -25,7 +25,9 @@ func CurrentUser(ctx context.Context) (interface{}, error) {
 	return ctxFn.(func(ctx context.Context) (interface{}, error))(ctx)
 }
 
-func setCurrentUserFn(ctx context.Context, fn func(ctx context.Context) (interface{}, error)) context.Context {
+// SetCurrentUserFn sets the context with the given current user resolver, it shouldn't
+// be used directly and is only exported for testing
+func SetCurrentUserFn(ctx context.Context, fn func(ctx context.Context) (interface{}, error)) context.Context {
 	return context.WithValue(ctx, &currentUserKey, fn)
 }
 
@@ -50,7 +52,7 @@ func currentUser(handler *oauth.Handler, renderer common.Renderer, logger zerolo
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			next.ServeHTTP(w, r.Clone(setCurrentUserFn(r.Context(), fn)))
+			next.ServeHTTP(w, r.Clone(SetCurrentUserFn(r.Context(), fn)))
 		})
 	}
 }

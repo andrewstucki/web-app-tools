@@ -61,9 +61,11 @@ func (m *NamespaceManager) RolesFor(ctx context.Context, globalNamespace, namesp
 	if ok {
 		memoryRoles = append(memoryRoles, globalRole.(*memoryRole))
 	}
-	role, ok := m.membership.Load(compoundKey(namespace, user))
-	if ok {
-		memoryRoles = append(memoryRoles, role.(*memoryRole))
+	if namespace != globalNamespace {
+		role, ok := m.membership.Load(compoundKey(namespace, user))
+		if ok {
+			memoryRoles = append(memoryRoles, role.(*memoryRole))
+		}
 	}
 	roles := make([]security.NamespaceRole, len(memoryRoles))
 	for i, memoryRole := range memoryRoles {

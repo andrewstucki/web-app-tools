@@ -43,7 +43,7 @@ func (h *V1Handler) WithCurrentUser(ctx context.Context, w http.ResponseWriter, 
 func (h *V1Handler) Authenticated(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		getCurrentUser(r.Context(), h.logger, h.Renderer, w, true, func(current *models.User) {
-			next(w, r.Clone(context.WithValue(r.Context(), &userKey, current)))
+			next(w, r.Clone(setCurrentUser(r.Context(), current)))
 		})
 	}
 }
@@ -52,7 +52,7 @@ func (h *V1Handler) Authenticated(next http.HandlerFunc) http.HandlerFunc {
 func (h *V1Handler) Authorized(action security.Action, resource security.Resource, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		can(r.Context(), h.logger, h.Renderer, w, action, resource, func(current *models.User) {
-			next(w, r.Clone(context.WithValue(r.Context(), &userKey, current)))
+			next(w, r.Clone(setCurrentUser(r.Context(), current)))
 		})
 	}
 }
@@ -60,6 +60,10 @@ func (h *V1Handler) Authorized(action security.Action, resource security.Resourc
 // CurrentUser should only be used when Authenticated or Authorized wraps a handler
 func CurrentUser(ctx context.Context) *models.User {
 	return ctx.Value(&userKey).(*models.User)
+}
+
+func setCurrentUser(ctx context.Context, user *models.User) context.Context {
+	return context.WithValue(ctx, &userKey, user)
 }
 
 func getCurrentUser(ctx context.Context, logger zerolog.Logger, render common.Renderer, w http.ResponseWriter, required bool, inner func(current *models.User)) {
